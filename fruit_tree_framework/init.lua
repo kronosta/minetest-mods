@@ -320,6 +320,7 @@ function fruit_tree_framework.register_fruit(name, table, recipegrid)
     if meta then
         meta:set_string("fruit_tree_framework:type", name)
         meta:set_string("palette_index", table.fruit_color)
+        meta:set_string("description", table.name .. " Sapling")
     end
     local resultstring = resultitem:to_string()
     if recipegrid then
