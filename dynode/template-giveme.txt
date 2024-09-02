@@ -1,0 +1,1 @@
+/giveme dynode:basic_custom 1 0 "\u0001dynode:appearance_props\u0002{\"visual\":\"cube\",\"textures\":[\"default_acacia_tree_top.png^[invert:rgb\",\"default_acacia_tree_top.png\",\"default_acacia_tree_top.png^[invert:rgb\",\"default_acacia_tree_top.png\",\"default_acacia_tree_top.png^[invert:rgb\",\"default_acacia_tree_top.png\"]}\u0003"
