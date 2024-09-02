@@ -1,5 +1,8 @@
+local modpath = minetest.get_modpath(minetest.get_current_modname())
+
 fruit_tree_framework = {}
 fruit_tree_framework.registered_fruits = {}
+fruit_tree_framework.maturation_time = Settings(modpath .. "/fruit.conf"):get("maturation_time") or 5
 
 local function get_fruit_pos(pos)
     local meta = minetest.get_meta(pos)
@@ -22,6 +25,22 @@ local function get_fruit_table(meta)
     return fruit
 end
 
+local function get_fruit_name(fruit)
+    local fruitdef = fruit_tree_framework.registered_fruits[fruit]
+    if fruitdef then
+        local fruit_name = fruitdef.name
+        if fruit_name then
+            name = fruit_name
+        end
+    elseif string.sub(fruit, 1, 1) == "~" then
+        -- This is an itemstring sapling
+        local itemstring = string.sub(fruit, 2, -1)
+        local shortdesc = ItemStack(itemstring):get_description()
+        name = shortdesc
+    end
+    return name
+end
+
 function fruit_tree_framework.setup_common_metadata(pos, itemstack)
     local itemmeta = itemstack:get_meta()
     if itemmeta then
@@ -30,24 +49,14 @@ function fruit_tree_framework.setup_common_metadata(pos, itemstack)
             local nodemeta = minetest.get_meta(pos)
             if nodemeta then
                 nodemeta:set_string("fruit_tree_framework:type", fruit)
-                local fruitdef = fruit_tree_framework.registered_fruits[fruit];
-                if fruitdef then
-                    local fruit_name = fruitdef.name
-                    if fruit_name then
-                        nodemeta:set_string("infotext", fruit_name)
-                    end
-                elseif string.sub(fruit, 1, 1) == "~" then
-                    -- This is an itemstring sapling
-                    local itemstring = string.sub(fruit, 2, -1)
-                    local shortdesc = ItemStack(itemstring):get_description()
-                    nodemeta:set_string("infotext", shortdesc)
-                end
+                local name = get_fruit_name(fruit)
+                nodemeta:set_string("infotext", name)
             end
         end
     end
 end
 
-function fruit_tree_framework.preserve_common_metadata(oldmeta, drops, itemname)
+function fruit_tree_framework.preserve_common_metadata(oldmeta, drops, itemname, name_append)
     local fruit = get_fruit_table(oldmeta);
     local itemmeta
     if fruit then
@@ -56,6 +65,7 @@ function fruit_tree_framework.preserve_common_metadata(oldmeta, drops, itemname)
                 itemmeta = drop:get_meta()
                 if itemmeta then
                     itemmeta:set_string("fruit_tree_framework:type", fruit)
+                    itemmeta:set_string("description", get_fruit_name(fruit) .. " " .. name_append)
                 end
             end
         end
@@ -91,17 +101,7 @@ function fruit_tree_framework.grow_tree(pos, fruit)
     if log_color == nil then
         log_color = 1
     end
-    if fruitdef then
-        local fruit_name = fruitdef.name
-        if fruit_name then
-            name = fruit_name
-        end
-    elseif string.sub(fruit, 1, 1) == "~" then
-        -- This is an itemstring sapling
-        local itemstring = string.sub(fruit, 2, -1)
-        local shortdesc = ItemStack(itemstring):get_description()
-        name = shortdesc
-    end
+    name = get_fruit_name(fruit)
     for i=-2,2 do
         for j=2,5 do
             for k=-2,2 do
@@ -115,7 +115,7 @@ function fruit_tree_framework.grow_tree(pos, fruit)
                 end
                 local timer = minetest.get_node_timer(newpos)
                 if timer then
-                    timer:start(5)
+                    timer:start(fruit_tree_framework.maturation_time)
                 end
             end
         end
@@ -132,7 +132,7 @@ function fruit_tree_framework.grow_tree(pos, fruit)
 end
 
 function fruit_tree_framework.sapling_preserve_metadata(pos, oldnode, oldmeta, drops)
-    local itemmeta = fruit_tree_framework.preserve_common_metadata(oldmeta, drops, "fruit_tree_framework:sapling")
+    local itemmeta = fruit_tree_framework.preserve_common_metadata(oldmeta, drops, "fruit_tree_framework:sapling", "Sapling")
     local fruit = get_fruit_table(oldmeta)
     local fruitdef = fruit_tree_framework.registered_fruits[fruit]
     if fruitdef and fruitdef.fruit_color then
@@ -144,7 +144,7 @@ function fruit_tree_framework.sapling_after_place_node(pos, placer, itemstack, p
     fruit_tree_framework.setup_common_metadata(pos, itemstack)
     local timer = minetest.get_node_timer(pos)
     if timer then
-        timer:start(5)
+        timer:start(fruit_tree_framework.maturation_time)
     end
 end
 
@@ -176,7 +176,7 @@ minetest.register_node("fruit_tree_framework:sapling", {
 })
 
 function fruit_tree_framework.log_preserve_metadata(pos, oldnode, oldmeta, drops)
-    local itemmeta = fruit_tree_framework.preserve_common_metadata(oldmeta, drops, "fruit_tree_framework:log")
+    local itemmeta = fruit_tree_framework.preserve_common_metadata(oldmeta, drops, "fruit_tree_framework:log", "Log")
     local fruit = get_fruit_table(oldmeta)
     local fruitdef = fruit_tree_framework.registered_fruits[fruit]
     if fruitdef and fruitdef.log_color then
@@ -207,7 +207,7 @@ minetest.register_node("fruit_tree_framework:log", {
 })
 
 function fruit_tree_framework.leaves_preserve_metadata(pos, oldnode, oldmeta, drops)
-    local itemmeta = fruit_tree_framework.preserve_common_metadata(oldmeta, drops, "fruit_tree_framework:leaves")
+    local itemmeta = fruit_tree_framework.preserve_common_metadata(oldmeta, drops, "fruit_tree_framework:leaves", "Leaves")
     local fruit = get_fruit_table(oldmeta)
     local fruitdef = fruit_tree_framework.registered_fruits[fruit]
     if fruitdef and fruitdef.fruit_color then
@@ -224,7 +224,7 @@ function fruit_tree_framework.leaves_after_place_node(pos, placer, itemstack, po
     end
     local timer = minetest.get_node_timer(pos)
     if timer then
-        timer:start(5)
+        timer:start(fruit_tree_framework.maturation_time)
     end
     local node = minetest.get_node(pos)
     node.param2 = 0
@@ -272,7 +272,7 @@ function fruit_tree_framework.leaves_on_rightclick(pos, node, clicker, itemstack
             meta:set_string("infotext", string.gsub(meta:get_string("infotext"), "%(Ready%)", "") .. "(Not Ready)")
             local timer = minetest.get_node_timer(pos)
             if timer then
-                timer:start(5)
+                timer:start(fruit_tree_framework.maturation_time)
             end
             node.param2 = 0
         end
